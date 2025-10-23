@@ -69,22 +69,22 @@ export default function ProfileScreen() {
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Ionicons name="map" size={24} color={Colors.communistRed} />
-              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statNumber}>{visitedPrisons.length}</Text>
               <Text style={styles.statLabel}>Închisori vizitate</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="qr-code" size={24} color={Colors.communistRed} />
-              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statNumber}>{scannedQRs.length}</Text>
               <Text style={styles.statLabel}>QR-uri scanate</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="documents" size={24} color={Colors.communistRed} />
-              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statNumber}>{readDocuments.length}</Text>
               <Text style={styles.statLabel}>Documente citite</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="headset" size={24} color={Colors.communistRed} />
-              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statNumber}>{listenedTestimonies.length}</Text>
               <Text style={styles.statLabel}>Mărturii ascultate</Text>
             </View>
           </View>
