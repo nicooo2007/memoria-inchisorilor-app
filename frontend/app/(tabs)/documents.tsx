@@ -215,6 +215,9 @@ export default function DocumentsScreen() {
           </View>
         }
       />
+
+      {/* QR Scanner Button */}
+      <QRButton />
     </SafeAreaView>
   );
 }
