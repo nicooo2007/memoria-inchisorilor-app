@@ -1,31 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
+  Modal,
   ScrollView,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../src/constants/colors';
 import Typography from '../../src/constants/typography';
 import Layout from '../../src/constants/layout';
 import Card from '../../src/components/ui/Card';
 import Badge from '../../src/components/ui/Badge';
+import Button from '../../src/components/ui/Button';
 import { fetchPrisons } from '../../src/services/api';
 import { Prison } from '../../src/types';
+import { calculateDistance, formatDistance } from '../../src/utils/helpers';
+
+const ROMANIA_REGION = {
+  latitude: 45.9432,
+  longitude: 24.9668,
+  latitudeDelta: 6,
+  longitudeDelta: 6,
+};
 
 export default function MapScreen() {
   const router = useRouter();
+  const mapRef = useRef<MapView>(null);
   const [prisons, setPrisons] = useState<Prison[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [selectedPrison, setSelectedPrison] = useState<Prison | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const prisonTypes = [
     { key: null, label: 'Toate', icon: 'apps' },
@@ -36,6 +51,7 @@ export default function MapScreen() {
 
   useEffect(() => {
     loadPrisons();
+    getUserLocation();
   }, []);
 
   const loadPrisons = async () => {
@@ -46,27 +62,27 @@ export default function MapScreen() {
       console.error('Failed to load prisons:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadPrisons();
+  const getUserLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      }
+    } catch (error) {
+      console.log('Location permission denied');
+    }
   };
 
   const filteredPrisons = selectedType
     ? prisons.filter(p => p.type === selectedType)
     : prisons;
-
-  const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      memorial: 'Memorial',
-      prison: 'Închisoare',
-      camp: 'Tabere',
-    };
-    return labels[type] || type;
-  };
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -77,137 +93,279 @@ export default function MapScreen() {
     return colors[type] || Colors.communistRed;
   };
 
-  const renderPrisonCard = ({ item }: { item: Prison }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/prison/${item.id || item._id}`)}
-      activeOpacity={0.8}
-    >
-      <Card style={styles.prisonCard}>
-        <View style={styles.prisonHeader}>
-          <View
-            style={[
-              styles.iconContainer,
-              { borderColor: getTypeColor(item.type) },
-            ]}
-          >
-            <Ionicons
-              name={item.type === 'memorial' ? 'shield-checkmark' : 'lock-closed'}
-              size={28}
-              color={getTypeColor(item.type)}
-            />
-          </View>
-          <View style={styles.prisonInfo}>
-            <Text style={styles.prisonName} numberOfLines={2}>
-              {item.name}
-            </Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location" size={14} color={Colors.textSecondary} />
-              <Text style={styles.locationText}>
-                {item.coordinates.latitude.toFixed(2)}°N,{' '}
-                {item.coordinates.longitude.toFixed(2)}°E
-              </Text>
-            </View>
-          </View>
-        </View>
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      memorial: 'Memorial',
+      prison: 'Închisoare',
+      camp: 'Tabără',
+    };
+    return labels[type] || type;
+  };
 
-        <Text style={styles.prisonDescription} numberOfLines={3}>
-          {item.description}
-        </Text>
+  const handleMarkerPress = (prison: Prison) => {
+    setSelectedPrison(prison);
+    setShowModal(true);
+    
+    // Center map on selected prison
+    mapRef.current?.animateToRegion({
+      latitude: prison.coordinates.latitude,
+      longitude: prison.coordinates.longitude,
+      latitudeDelta: 0.5,
+      longitudeDelta: 0.5,
+    }, 500);
+  };
 
-        <View style={styles.prisonFooter}>
-          <Badge label={getTypeLabel(item.type)} variant="default" />
-          <View style={styles.victimsTag}>
-            <Ionicons name="people" size={14} color={Colors.textSecondary} />
-            <Text style={styles.victimsText}>
-              ~{item.estimated_victims.toLocaleString()} victime
-            </Text>
-          </View>
-        </View>
+  const resetMapView = () => {
+    mapRef.current?.animateToRegion(ROMANIA_REGION, 1000);
+  };
 
-        {item.visit_info && (
-          <View style={styles.visitBanner}>
-            <Ionicons name="information-circle" size={16} color={Colors.successGreen} />
-            <Text style={styles.visitText}>Deschis vizitatorilor</Text>
-          </View>
-        )}
-      </Card>
-    </TouchableOpacity>
-  );
+  const centerOnUserLocation = () => {
+    if (userLocation) {
+      mapRef.current?.animateToRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.5,
+        longitudeDelta: 0.5,
+      }, 1000);
+    }
+  };
+
+  const openInMaps = (prison: Prison) => {
+    const scheme = Platform.select({
+      ios: 'maps:0,0?q=',
+      android: 'geo:0,0?q=',
+    });
+    const latLng = `${prison.coordinates.latitude},${prison.coordinates.longitude}`;
+    const label = prison.name;
+    const url = Platform.select({
+      ios: `${scheme}${label}@${latLng}`,
+      android: `${scheme}${latLng}(${label})`,
+    });
+
+    if (url) {
+      Linking.openURL(url);
+    }
+  };
+
+  const customMapStyle = [
+    {
+      "elementType": "geometry",
+      "stylers": [{ "color": "#1a1a1a" }]
+    },
+    {
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#8b8b8b" }]
+    },
+    {
+      "elementType": "labels.text.stroke",
+      "stylers": [{ "color": "#000000" }]
+    },
+    {
+      "featureType": "water",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#333333" }]
+    }
+  ];
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.communistRed} />
-        <Text style={styles.loadingText}>Încărcare locații...</Text>
+        <Text style={styles.loadingText}>Încărcare hartă...</Text>
       </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* Map */}
+      <MapView
+        ref={mapRef}
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        initialRegion={ROMANIA_REGION}
+        customMapStyle={customMapStyle}
+        showsUserLocation={true}
+        showsMyLocationButton={false}
+      >
+        {filteredPrisons.map((prison) => (
+          <Marker
+            key={prison.id || prison._id}
+            coordinate={{
+              latitude: prison.coordinates.latitude,
+              longitude: prison.coordinates.longitude,
+            }}
+            onPress={() => handleMarkerPress(prison)}
+          >
+            <View style={[styles.marker, { backgroundColor: getTypeColor(prison.type) }]}>
+              <Ionicons
+                name={prison.type === 'memorial' ? 'shield-checkmark' : 'lock-closed'}
+                size={20}
+                color={Colors.white}
+              />
+            </View>
+          </Marker>
+        ))}
+      </MapView>
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>HARTĂ ÎNCHISORI</Text>
-        <Text style={styles.headerSubtitle}>
-          Locuri de detenție din perioada comunistă
-        </Text>
-      </View>
-
-      {/* Map Placeholder */}
-      <View style={styles.mapPlaceholder}>
-        <Ionicons name="map" size={48} color={Colors.textSecondary} />
-        <Text style={styles.mapPlaceholderText}>
-          Hartă interactivă va fi disponibilă în curând
-        </Text>
-        <Text style={styles.mapPlaceholderSubtext}>
-          Momentan puteți vedea lista închisorilor mai jos
-        </Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>HARTĂ ÎNCHISORI</Text>
+          <Text style={styles.headerSubtitle}>{filteredPrisons.length} locații</Text>
+        </View>
       </View>
 
       {/* Filter Chips */}
       <View style={styles.filterContainer}>
-        {prisonTypes.map(type => (
-          <TouchableOpacity
-            key={type.key || 'all'}
-            style={[
-              styles.filterChip,
-              selectedType === type.key && styles.filterChipActive,
-            ]}
-            onPress={() => setSelectedType(type.key)}
-          >
-            <Ionicons
-              name={type.icon as any}
-              size={16}
-              color={
-                selectedType === type.key ? Colors.white : Colors.textSecondary
-              }
-            />
-            <Text
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {prisonTypes.map(type => (
+            <TouchableOpacity
+              key={type.key || 'all'}
               style={[
-                styles.filterChipText,
-                selectedType === type.key && styles.filterChipTextActive,
+                styles.filterChip,
+                selectedType === type.key && styles.filterChipActive,
               ]}
+              onPress={() => setSelectedType(type.key)}
             >
-              {type.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Ionicons
+                name={type.icon as any}
+                size={16}
+                color={selectedType === type.key ? Colors.white : Colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedType === type.key && styles.filterChipTextActive,
+                ]}
+              >
+                {type.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
-      {/* Prisons List */}
-      <FlatList
-        data={filteredPrisons}
-        keyExtractor={item => item.id || item._id || Math.random().toString()}
-        renderItem={renderPrisonCard}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.communistRed}
-          />
-        }
-      />
+      {/* Control Buttons */}
+      <View style={styles.controls}>
+        <TouchableOpacity style={styles.controlButton} onPress={resetMapView}>
+          <Ionicons name="locate" size={24} color={Colors.white} />
+        </TouchableOpacity>
+        {userLocation && (
+          <TouchableOpacity style={styles.controlButton} onPress={centerOnUserLocation}>
+            <Ionicons name="navigate" size={24} color={Colors.white} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Prison Detail Modal */}
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedPrison && (
+              <>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalTitleContainer}>
+                    <View style={[styles.modalIcon, { borderColor: getTypeColor(selectedPrison.type) }]}>
+                      <Ionicons
+                        name={selectedPrison.type === 'memorial' ? 'shield-checkmark' : 'lock-closed'}
+                        size={32}
+                        color={getTypeColor(selectedPrison.type)}
+                      />
+                    </View>
+                    <View style={styles.modalTitleText}>
+                      <Text style={styles.modalTitle}>{selectedPrison.name}</Text>
+                      <Badge label={getTypeLabel(selectedPrison.type)} variant="default" />
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setShowModal(false)}
+                    style={styles.closeButton}
+                  >
+                    <Ionicons name="close" size={28} color={Colors.white} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.modalBody}>
+                  <Card style={styles.statsCard}>
+                    <View style={styles.statsRow}>
+                      <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>
+                          {selectedPrison.operational_years[0]}-{selectedPrison.operational_years[1]}
+                        </Text>
+                        <Text style={styles.statLabel}>Ani Funcționare</Text>
+                      </View>
+                      <View style={styles.statDivider} />
+                      <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>
+                          ~{selectedPrison.estimated_victims.toLocaleString()}
+                        </Text>
+                        <Text style={styles.statLabel}>Victime</Text>
+                      </View>
+                    </View>
+                  </Card>
+
+                  <Text style={styles.description}>{selectedPrison.description}</Text>
+
+                  {userLocation && (
+                    <Card style={styles.distanceCard}>
+                      <View style={styles.distanceRow}>
+                        <Ionicons name="navigate-circle" size={24} color={Colors.communistRed} />
+                        <Text style={styles.distanceText}>
+                          Distanță: {formatDistance(calculateDistance(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            selectedPrison.coordinates.latitude,
+                            selectedPrison.coordinates.longitude
+                          ))}
+                        </Text>
+                      </View>
+                    </Card>
+                  )}
+
+                  {selectedPrison.visit_info && (
+                    <Card style={styles.visitCard}>
+                      <Text style={styles.sectionTitle}>INFORMAȚII VIZITĂ</Text>
+                      <View style={styles.visitRow}>
+                        <Ionicons name="location" size={20} color={Colors.communistRed} />
+                        <Text style={styles.visitText}>{selectedPrison.visit_info.address}</Text>
+                      </View>
+                      {selectedPrison.visit_info.schedule && (
+                        <View style={styles.visitRow}>
+                          <Ionicons name="time" size={20} color={Colors.communistRed} />
+                          <Text style={styles.visitText}>{selectedPrison.visit_info.schedule}</Text>
+                        </View>
+                      )}
+                    </Card>
+                  )}
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <Button
+                    title="DETALII COMPLETE"
+                    onPress={() => {
+                      setShowModal(false);
+                      router.push(`/prison/${selectedPrison.id || selectedPrison._id}`);
+                    }}
+                    style={styles.footerButton}
+                  />
+                  <Button
+                    title="NAVIGARE"
+                    onPress={() => openInMaps(selectedPrison)}
+                    variant="secondary"
+                    style={styles.footerButton}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
