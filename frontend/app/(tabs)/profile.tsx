@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,43 @@ import Colors from '../../src/constants/colors';
 import Typography from '../../src/constants/typography';
 import Layout from '../../src/constants/layout';
 import Card from '../../src/components/ui/Card';
+import { useUserStore } from '../../src/store/userStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const {
+    visitedPrisons,
+    scannedQRs,
+    readDocuments,
+    listenedTestimonies,
+    badges,
+    loadProgress,
+  } = useUserStore();
+
+  useEffect(() => {
+    loadProgress();
+  }, []);
+
+  const getBadgeInfo = (badgeId: string) => {
+    const badgeData: Record<string, { name: string; icon: any; description: string }> = {
+      explorer: {
+        name: 'Explorator',
+        icon: 'map',
+        description: 'Vizitează 3+ închisori',
+      },
+      scholar: {
+        name: 'Student de Istorie',
+        icon: 'school',
+        description: 'Citește 10+ documente',
+      },
+      qr_master: {
+        name: 'Memorialist',
+        icon: 'qr-code',
+        description: 'Scanează 5+ coduri QR',
+      },
+    };
+    return badgeData[badgeId] || { name: badgeId, icon: 'medal', description: '' };
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
