@@ -17,6 +17,7 @@ import Typography from '../../src/constants/typography';
 import Layout from '../../src/constants/layout';
 import Card from '../../src/components/ui/Card';
 import Badge from '../../src/components/ui/Badge';
+import QRButton from '../../src/components/common/QRButton';
 import { fetchDocuments } from '../../src/services/api';
 import { Document } from '../../src/types';
 
