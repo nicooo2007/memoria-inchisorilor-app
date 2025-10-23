@@ -386,47 +386,39 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: Typography.body,
   },
+  map: {
+    flex: 1,
+  },
   header: {
-    padding: Layout.spacing.lg,
-    backgroundColor: Colors.darkGray,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(26, 26, 26, 0.95)',
     borderBottomWidth: 2,
     borderBottomColor: Colors.communistRed,
   },
+  headerContent: {
+    padding: Layout.spacing.md,
+  },
   headerTitle: {
-    fontSize: Typography.h2,
+    fontSize: Typography.h3,
     fontWeight: 'bold',
     color: Colors.white,
     letterSpacing: Typography.letterSpacingWide,
   },
   headerSubtitle: {
-    fontSize: Typography.bodySmall,
+    fontSize: Typography.small,
     color: Colors.textSecondary,
     marginTop: Layout.spacing.xs,
-  },
-  mapPlaceholder: {
-    backgroundColor: Colors.darkGray,
-    padding: Layout.spacing.xl,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  mapPlaceholderText: {
-    fontSize: Typography.body,
-    color: Colors.text,
-    marginTop: Layout.spacing.md,
-    textAlign: 'center',
-  },
-  mapPlaceholderSubtext: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: Layout.spacing.xs,
-    textAlign: 'center',
   },
   filterContainer: {
-    flexDirection: 'row',
-    padding: Layout.spacing.md,
-    gap: Layout.spacing.sm,
-    flexWrap: 'wrap',
+    position: 'absolute',
+    top: 90,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
   },
   filterChip: {
     flexDirection: 'row',
@@ -435,9 +427,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.sm,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: Colors.darkGray,
+    backgroundColor: 'rgba(26, 26, 26, 0.9)',
     borderWidth: 1,
     borderColor: Colors.borderLight,
+    marginRight: Layout.spacing.sm,
   },
   filterChipActive: {
     backgroundColor: Colors.communistRed,
@@ -451,77 +444,165 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: Colors.white,
   },
-  listContainer: {
-    padding: Layout.spacing.lg,
-    paddingBottom: Layout.spacing.xxl,
+  controls: {
+    position: 'absolute',
+    right: Layout.spacing.md,
+    bottom: Layout.spacing.xxl + 80,
+    gap: Layout.spacing.sm,
   },
-  prisonCard: {
-    marginBottom: Layout.spacing.md,
+  controlButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.communistRed,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  prisonHeader: {
+  marker: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.white,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.darkGray,
+    borderTopLeftRadius: Layout.borderRadius.lg,
+    borderTopRightRadius: Layout.borderRadius.lg,
+    maxHeight: '80%',
+    borderTopWidth: 3,
+    borderTopColor: Colors.communistRed,
+  },
+  modalHeader: {
     flexDirection: 'row',
-    marginBottom: Layout.spacing.md,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: Layout.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
   },
-  iconContainer: {
+  modalTitleContainer: {
+    flexDirection: 'row',
+    flex: 1,
+    gap: Layout.spacing.md,
+  },
+  modalIcon: {
     width: 60,
     height: 60,
-    borderRadius: Layout.borderRadius.sm,
+    borderRadius: 30,
     backgroundColor: Colors.mediumGray,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Layout.spacing.md,
   },
-  prisonInfo: {
+  modalTitleText: {
     flex: 1,
+    gap: Layout.spacing.sm,
   },
-  prisonName: {
+  modalTitle: {
+    fontSize: Typography.h3,
+    fontWeight: 'bold',
+    color: Colors.white,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBody: {
+    padding: Layout.spacing.lg,
+  },
+  statsCard: {
+    marginBottom: Layout.spacing.md,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: Typography.h3,
+    fontWeight: 'bold',
+    color: Colors.communistRed,
+  },
+  statLabel: {
+    fontSize: Typography.small,
+    color: Colors.textSecondary,
+    marginTop: Layout.spacing.xs,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: Colors.borderLight,
+  },
+  description: {
+    fontSize: Typography.body,
+    color: Colors.text,
+    lineHeight: Typography.body * Typography.lineHeightRelaxed,
+    marginBottom: Layout.spacing.md,
+  },
+  distanceCard: {
+    marginBottom: Layout.spacing.md,
+    backgroundColor: Colors.mediumGray,
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Layout.spacing.md,
+  },
+  distanceText: {
+    fontSize: Typography.body,
+    color: Colors.white,
+    fontWeight: 'bold',
+  },
+  visitCard: {
+    marginBottom: Layout.spacing.md,
+  },
+  sectionTitle: {
     fontSize: Typography.body,
     fontWeight: 'bold',
     color: Colors.white,
-    marginBottom: Layout.spacing.xs,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Layout.spacing.xs,
-  },
-  locationText: {
-    fontSize: Typography.small,
-    color: Colors.textSecondary,
-  },
-  prisonDescription: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    lineHeight: Typography.bodySmall * Typography.lineHeightNormal,
+    letterSpacing: Typography.letterSpacingWide,
     marginBottom: Layout.spacing.md,
   },
-  prisonFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  victimsTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Layout.spacing.xs,
-  },
-  victimsText: {
-    fontSize: Typography.small,
-    color: Colors.textSecondary,
-  },
-  visitBanner: {
+  visitRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Layout.spacing.sm,
-    marginTop: Layout.spacing.md,
-    paddingTop: Layout.spacing.md,
+    marginBottom: Layout.spacing.sm,
+  },
+  visitText: {
+    flex: 1,
+    fontSize: Typography.bodySmall,
+    color: Colors.text,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: Layout.spacing.md,
+    padding: Layout.spacing.lg,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
   },
-  visitText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.successGreen,
-    fontWeight: '600',
+  footerButton: {
+    flex: 1,
   },
 });
