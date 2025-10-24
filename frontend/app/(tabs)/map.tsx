@@ -694,4 +694,71 @@ const styles = StyleSheet.create({
   footerButton: {
     flex: 1,
   },
+  listContainer: {
+    padding: Layout.spacing.lg,
+    paddingBottom: Layout.spacing.xxl,
+    paddingTop: 160,
+  },
+  webHeader: {
+    alignItems: 'center',
+    padding: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+  },
+  webHeaderText: {
+    fontSize: Typography.h2,
+    fontWeight: 'bold',
+    color: Colors.white,
+    marginTop: Layout.spacing.md,
+  },
+  webHeaderSubtext: {
+    fontSize: Typography.body,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: Layout.spacing.sm,
+  },
+  prisonCard: {
+    marginBottom: Layout.spacing.md,
+  },
+  prisonHeader: {
+    flexDirection: 'row',
+    marginBottom: Layout.spacing.sm,
+  },
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: Layout.borderRadius.sm,
+    backgroundColor: Colors.mediumGray,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Layout.spacing.md,
+  },
+  prisonInfo: {
+    flex: 1,
+  },
+  prisonName: {
+    fontSize: Typography.body,
+    fontWeight: 'bold',
+    color: Colors.white,
+    marginBottom: Layout.spacing.xs,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Layout.spacing.xs,
+  },
+  locationText: {
+    fontSize: Typography.small,
+    color: Colors.textSecondary,
+  },
+  prisonFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  distanceTextSmall: {
+    fontSize: Typography.small,
+    color: Colors.communistRed,
+    fontWeight: '600',
+  },
 });
