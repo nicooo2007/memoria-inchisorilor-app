@@ -9,10 +9,10 @@ import {
   ScrollView,
   Linking,
   Platform,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../src/constants/colors';
@@ -25,6 +25,18 @@ import { fetchPrisons } from '../../src/services/api';
 import { Prison } from '../../src/types';
 import { calculateDistance, formatDistance } from '../../src/utils/helpers';
 
+// Import MapView only for native platforms
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+
+if (Platform.OS !== 'web') {
+  const MapModule = require('react-native-maps');
+  MapView = MapModule.default;
+  Marker = MapModule.Marker;
+  PROVIDER_GOOGLE = MapModule.PROVIDER_GOOGLE;
+}
+
 const ROMANIA_REGION = {
   latitude: 45.9432,
   longitude: 24.9668,
@@ -34,7 +46,7 @@ const ROMANIA_REGION = {
 
 export default function MapScreen() {
   const router = useRouter();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const [prisons, setPrisons] = useState<Prison[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPrison, setSelectedPrison] = useState<Prison | null>(null);
@@ -106,22 +118,26 @@ export default function MapScreen() {
     setSelectedPrison(prison);
     setShowModal(true);
     
-    // Center map on selected prison
-    mapRef.current?.animateToRegion({
-      latitude: prison.coordinates.latitude,
-      longitude: prison.coordinates.longitude,
-      latitudeDelta: 0.5,
-      longitudeDelta: 0.5,
-    }, 500);
+    // Center map on selected prison (only on native)
+    if (Platform.OS !== 'web' && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: prison.coordinates.latitude,
+        longitude: prison.coordinates.longitude,
+        latitudeDelta: 0.5,
+        longitudeDelta: 0.5,
+      }, 500);
+    }
   };
 
   const resetMapView = () => {
-    mapRef.current?.animateToRegion(ROMANIA_REGION, 1000);
+    if (Platform.OS !== 'web' && mapRef.current) {
+      mapRef.current.animateToRegion(ROMANIA_REGION, 1000);
+    }
   };
 
   const centerOnUserLocation = () => {
-    if (userLocation) {
-      mapRef.current?.animateToRegion({
+    if (userLocation && Platform.OS !== 'web' && mapRef.current) {
+      mapRef.current.animateToRegion({
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
         latitudeDelta: 0.5,
@@ -134,12 +150,14 @@ export default function MapScreen() {
     const scheme = Platform.select({
       ios: 'maps:0,0?q=',
       android: 'geo:0,0?q=',
+      web: 'https://www.google.com/maps/search/?api=1&query=',
     });
     const latLng = `${prison.coordinates.latitude},${prison.coordinates.longitude}`;
     const label = prison.name;
     const url = Platform.select({
       ios: `${scheme}${label}@${latLng}`,
       android: `${scheme}${latLng}(${label})`,
+      web: `${scheme}${latLng}`,
     });
 
     if (url) {
@@ -167,6 +185,55 @@ export default function MapScreen() {
     }
   ];
 
+  const renderPrisonListItem = ({ item }: { item: Prison }) => (
+    <TouchableOpacity
+      onPress={() => handleMarkerPress(item)}
+      activeOpacity={0.8}
+    >
+      <Card style={styles.prisonCard}>
+        <View style={styles.prisonHeader}>
+          <View
+            style={[
+              styles.iconContainer,
+              { borderColor: getTypeColor(item.type) },
+            ]}
+          >
+            <Ionicons
+              name={item.type === 'memorial' ? 'shield-checkmark' : 'lock-closed'}
+              size={28}
+              color={getTypeColor(item.type)}
+            />
+          </View>
+          <View style={styles.prisonInfo}>
+            <Text style={styles.prisonName} numberOfLines={2}>
+              {item.name}
+            </Text>
+            <View style={styles.locationRow}>
+              <Ionicons name="location" size={14} color={Colors.textSecondary} />
+              <Text style={styles.locationText}>
+                {item.coordinates.latitude.toFixed(2)}°N,{' '}
+                {item.coordinates.longitude.toFixed(2)}°E
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.prisonFooter}>
+          <Badge label={getTypeLabel(item.type)} variant="default" />
+          {userLocation && (
+            <Text style={styles.distanceTextSmall}>
+              {formatDistance(calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                item.coordinates.latitude,
+                item.coordinates.longitude
+              ))}
+            </Text>
+          )}
+        </View>
+      </Card>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -178,35 +245,55 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      {/* Map */}
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        initialRegion={ROMANIA_REGION}
-        customMapStyle={customMapStyle}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-      >
-        {filteredPrisons.map((prison) => (
-          <Marker
-            key={prison.id || prison._id}
-            coordinate={{
-              latitude: prison.coordinates.latitude,
-              longitude: prison.coordinates.longitude,
-            }}
-            onPress={() => handleMarkerPress(prison)}
-          >
-            <View style={[styles.marker, { backgroundColor: getTypeColor(prison.type) }]}>
-              <Ionicons
-                name={prison.type === 'memorial' ? 'shield-checkmark' : 'lock-closed'}
-                size={20}
-                color={Colors.white}
-              />
+      {/* Map or List View */}
+      {Platform.OS !== 'web' && MapView ? (
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          initialRegion={ROMANIA_REGION}
+          customMapStyle={customMapStyle}
+          showsUserLocation={true}
+          showsMyLocationButton={false}
+        >
+          {filteredPrisons.map((prison) => (
+            <Marker
+              key={prison.id || prison._id}
+              coordinate={{
+                latitude: prison.coordinates.latitude,
+                longitude: prison.coordinates.longitude,
+              }}
+              onPress={() => handleMarkerPress(prison)}
+            >
+              <View style={[styles.marker, { backgroundColor: getTypeColor(prison.type) }]}>
+                <Ionicons
+                  name={prison.type === 'memorial' ? 'shield-checkmark' : 'lock-closed'}
+                  size={20}
+                  color={Colors.white}
+                />
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+      ) : (
+        <FlatList
+          data={filteredPrisons}
+          keyExtractor={item => item.id || item._id || Math.random().toString()}
+          renderItem={renderPrisonListItem}
+          contentContainerStyle={styles.listContainer}
+          ListHeaderComponent={
+            <View style={styles.webHeader}>
+              <Ionicons name="map" size={48} color={Colors.communistRed} />
+              <Text style={styles.webHeaderText}>
+                Listă Închisori
+              </Text>
+              <Text style={styles.webHeaderSubtext}>
+                Harta interactivă este disponibilă în aplicația mobilă
+              </Text>
             </View>
-          </Marker>
-        ))}
-      </MapView>
+          }
+        />
+      )}
 
       {/* Header */}
       <View style={styles.header}>
@@ -246,17 +333,19 @@ export default function MapScreen() {
         </ScrollView>
       </View>
 
-      {/* Control Buttons */}
-      <View style={styles.controls}>
-        <TouchableOpacity style={styles.controlButton} onPress={resetMapView}>
-          <Ionicons name="locate" size={24} color={Colors.white} />
-        </TouchableOpacity>
-        {userLocation && (
-          <TouchableOpacity style={styles.controlButton} onPress={centerOnUserLocation}>
-            <Ionicons name="navigate" size={24} color={Colors.white} />
+      {/* Control Buttons - Only on native */}
+      {Platform.OS !== 'web' && (
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.controlButton} onPress={resetMapView}>
+            <Ionicons name="locate" size={24} color={Colors.white} />
           </TouchableOpacity>
-        )}
-      </View>
+          {userLocation && (
+            <TouchableOpacity style={styles.controlButton} onPress={centerOnUserLocation}>
+              <Ionicons name="navigate" size={24} color={Colors.white} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Prison Detail Modal */}
       <Modal
