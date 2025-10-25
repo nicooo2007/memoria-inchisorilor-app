@@ -23,3 +23,19 @@ config.cacheStores = [
 config.maxWorkers = 2;
 
 module.exports = config;
+const { getDefaultConfig } = require('expo/metro-config');
+
+const config = getDefaultConfig(__dirname);
+
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Exclude react-native-maps on web
+  if (platform === 'web' && moduleName === 'react-native-maps') {
+    return {
+      type: 'empty',
+    };
+  }
+  
+  return context.resolveRequest(context, moduleName, platform);
+};
+
+module.exports = config;
